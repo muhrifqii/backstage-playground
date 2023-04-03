@@ -11,13 +11,16 @@
 
 FROM node:16-bullseye-slim
 
+# Set Python interpreter for `node-gyp` to use
+ENV PYTHON /usr/bin/python3
+
 # Install sqlite3 dependencies. You can skip this if you don't use sqlite3 in the image,
 # in which case you should also move better-sqlite3 to "devDependencies" in package.json.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-dev python3 build-essential && \
-    yarn config set python /usr/bin/python3
+    rm -rf /var/lib/apt/lists/*
 
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
@@ -30,11 +33,16 @@ WORKDIR /app
 # This switches many Node.js dependencies to production mode.
 ENV NODE_ENV production
 
+COPY --from=build --chown=node:node /app/.yarn ./.yarn
+COPY --from=build --chown=node:node /app/.yarnrc.yml  ./
+
 # Copy repo skeleton first, to avoid unnecessary docker cache invalidation.
 # The skeleton contains the package.json of each package in the monorepo,
 # and along with yarn.lock and the root package.json, that's enough to run yarn install.
 COPY --chown=node:node yarn.lock package.json packages/backend/dist/skeleton.tar.gz ./
 RUN tar xzf skeleton.tar.gz && rm skeleton.tar.gz
+
+RUN yarn workspaces focus --all --production && rm -rf "$(yarn cache clean)"
 
 RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid=1000 \
     yarn install --frozen-lockfile --production --network-timeout 300000

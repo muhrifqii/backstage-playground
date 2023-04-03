@@ -8,36 +8,35 @@
 
 import Router from 'express-promise-router';
 import {
-  createServiceBuilder,
-  loadBackendConfig,
-  getRootLogger,
-  useHotMemoize,
-  notFoundHandler,
   CacheManager,
+  createServiceBuilder,
   DatabaseManager,
+  getRootLogger,
+  loadBackendConfig,
+  notFoundHandler,
+  ServerTokenManager,
   SingleHostDiscovery,
   UrlReaders,
-  ServerTokenManager,
+  useHotMemoize,
 } from '@backstage/backend-common';
-import { TaskScheduler } from '@backstage/backend-tasks';
-import { Config } from '@backstage/config';
-import app from './plugins/app';
+import {TaskScheduler} from '@backstage/backend-tasks';
+import {Config} from '@backstage/config';
 import auth from './plugins/auth';
 import catalog from './plugins/catalog';
 import scaffolder from './plugins/scaffolder';
 import proxy from './plugins/proxy';
 import techdocs from './plugins/techdocs';
 import search from './plugins/search';
-import { PluginEnvironment } from './types';
-import { ServerPermissionClient } from '@backstage/plugin-permission-node';
-import { DefaultIdentityClient } from '@backstage/plugin-auth-node';
+import {PluginEnvironment} from './types';
+import {ServerPermissionClient} from '@backstage/plugin-permission-node';
+import {DefaultIdentityClient} from '@backstage/plugin-auth-node';
 
 function makeCreateEnv(config: Config) {
   const root = getRootLogger();
-  const reader = UrlReaders.default({ logger: root, config });
+  const reader = UrlReaders.default({logger: root, config});
   const discovery = SingleHostDiscovery.fromConfig(config);
   const cacheManager = CacheManager.fromConfig(config);
-  const databaseManager = DatabaseManager.fromConfig(config, { logger: root });
+  const databaseManager = DatabaseManager.fromConfig(config, {logger: root});
   const tokenManager = ServerTokenManager.noop();
   const taskScheduler = TaskScheduler.fromConfig(config);
 
@@ -84,7 +83,6 @@ async function main() {
   const proxyEnv = useHotMemoize(module, () => createEnv('proxy'));
   const techdocsEnv = useHotMemoize(module, () => createEnv('techdocs'));
   const searchEnv = useHotMemoize(module, () => createEnv('search'));
-  const appEnv = useHotMemoize(module, () => createEnv('app'));
 
   const apiRouter = Router();
   apiRouter.use('/catalog', await catalog(catalogEnv));
@@ -98,9 +96,8 @@ async function main() {
   apiRouter.use(notFoundHandler());
 
   const service = createServiceBuilder(module)
-    .loadConfig(config)
-    .addRouter('/api', apiRouter)
-    .addRouter('', await app(appEnv));
+  .loadConfig(config)
+  .addRouter('/api', apiRouter);
 
   await service.start().catch(err => {
     console.log(err);

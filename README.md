@@ -8,3 +8,5 @@ To start the app, run:
 yarn install
 yarn dev
 ```
+
+### on yarn 3 requires to do the following [guide](https://backstage.io/docs/tutorials/yarn-migration/)
